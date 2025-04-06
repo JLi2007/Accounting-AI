@@ -1,6 +1,6 @@
 export default defineContentScript({
-  matches: ['*://*.google.com/*'],
+  matches: ['*://docs.google.com/spreadsheets/*'],
   main() {
-    console.log('Hello content.');
+    console.log('Hello content from Google Sheets.');
   },
 });
