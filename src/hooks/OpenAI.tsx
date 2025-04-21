@@ -9,7 +9,8 @@ interface Message {
 
 const useChatbot = () => {
   const [messages, setMessages] = useState<Message[]>([]);
-  
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     const stored = localStorage.getItem("messages");
     setMessages(JSON.parse(stored ?? "[]"));
@@ -20,7 +21,11 @@ const useChatbot = () => {
       ...messages,
       { text: message, sender: "user" },
     ];
+    // add the user message
     setMessages(newMessages);
+    setLoading(true);
+    // add a ... bot message
+    setMessages([...newMessages, { text: "...", sender: "bot" }]);
 
     try {
       const response = await axios.post(
@@ -37,13 +42,19 @@ const useChatbot = () => {
         }
       );
       const botMessage = response.data.choices[0].message.content;
+      // replace the ... with real bot message
       setMessages([...newMessages, { text: botMessage, sender: "bot" }]);
-      localStorage.setItem("messages", JSON.stringify([...newMessages, { text: botMessage, sender: "bot" }]));
+      localStorage.setItem(
+        "messages",
+        JSON.stringify([...newMessages, { text: botMessage, sender: "bot" }])
+      );
     } catch (error) {
       console.error("error in request", error);
+    } finally {
+      setLoading(false);
     }
   };
-  return { messages, sendMessage };
+  return { messages, sendMessage, loading };
 };
 
 export default useChatbot;
