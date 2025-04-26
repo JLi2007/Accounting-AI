@@ -3,7 +3,7 @@ export default defineBackground(() => {
   
   browser.runtime.onMessage.addListener(async (message: any) => {
     if (message.action === "getToken") {
-      console.log('get token???')
+      console.log('[background] get token called')
     }
   });
 });

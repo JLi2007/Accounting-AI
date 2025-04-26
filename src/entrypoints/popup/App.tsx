@@ -3,6 +3,7 @@ import Chatbot from "@/components/Chatbot";
 import account from "../../assets/account.png";
 import sheets from "../../assets/sheets.png";
 import { IoIosReturnLeft } from "react-icons/io";
+import { initGapi } from "./sheets/gapi";
 
 function App() {
   const [showInfo, setShowInfo] = useState<boolean>(false);
@@ -11,35 +12,35 @@ function App() {
   async function analyzePage() {
     console.log("analyzing page");
     browser.runtime.sendMessage({ action: "getToken" });
+    signInAndSendToken();
   }
 
-  // load gapi script
-  function loadGapi() {
-    return new Promise<void>((resolve) => {
-      const script = document.createElement("script");
-      script.src = "https://apis.google.com/js/api.js";
-      script.onload = () => resolve(); //resolve --> wait until fully loaded
-      document.head.appendChild(script);
-    });
-  }
+  // // load gapi script
+  // function loadGapi(): Promise<void> {
+  //   return new Promise((resolve) => {
+  //     const script: HTMLScriptElement = document.createElement("script");
+  //     script.setAttribute('src', "/scripts/gapi.js");
+  //     script.setAttribute('type', 'text/javascript');
+  //     script.setAttribute('async', 'true');
+  //     script.onload = () => resolve();
+  //     document.head.appendChild(script);
+
+  //     const clientScript: HTMLScriptElement = document.createElement("script");
+  //     clientScript.setAttribute('src', "/scripts/gapi.js");
+  //     clientScript.setAttribute('type', 'text/javascript');
+  //     clientScript.setAttribute('async', 'true');
+  //     clientScript.onload = () => resolve();
+  //     document.head.appendChild(clientScript);
+  //   });
+  // }
 
   async function signInAndSendToken() {
-    console.log("about to load gapi")
-    await loadGapi();
-
-    const CLIENT_ID = import.meta.env.CLIENTID;
-    const SCOPES =
-      "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
-
-    await gapi.load("client:auth2");
-    await gapi.client.init({ clientId: CLIENT_ID, scope: SCOPES });
-
-    const user = await gapi.auth2.getAuthInstance().signIn();
-    const token = user.getAuthResponse().access_token;
-
-    console.log("token complete", token);
-
-    // browser.runtime.sendMessage({ action: "gotToken", token });
+    try {
+      await initGapi();
+      console.log("success gapi loaded");
+    } catch (e) {
+      console.log("error in signinsend token: ", e);
+    }
   }
 
   return (
@@ -93,7 +94,6 @@ function App() {
               className="bg-slate-500/80 p-4 my-5 w-50 cursor-pointer hover:bg-slate-500/90 transition delay-200 duration-100 ease-in-out rounded-sm drop-shadow-[0_5px_5px_rgba(15,157,88,0.5)]"
               onClick={() => {
                 analyzePage();
-                signInAndSendToken();
               }}
             >
               Analyze Page
