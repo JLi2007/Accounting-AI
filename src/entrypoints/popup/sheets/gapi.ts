@@ -1,59 +1,70 @@
-function loadGapiInsideDOM(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const script: HTMLScriptElement = document.createElement("script");
-    script.src = chrome.runtime.getURL("/scripts/gapi.js");
-    script.onload = () => resolve();
-    script.onerror = reject;
-    (document.head || document.documentElement).appendChild(script);
-  });
-}
-
 function loadClient(): Promise<void> {
   return new Promise((resolve, reject) => {
     const clientScript: HTMLScriptElement = document.createElement("script");
-    clientScript.src = chrome.runtime.getURL("/scripts/client.js");
+    clientScript.src = chrome.runtime.getURL("/scripts/gapi.js");
     clientScript.onload = () => resolve();
     clientScript.onerror = reject;
     (document.head || document.documentElement).appendChild(clientScript);
   });
 }
 
+function getAuthToken(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = `https://accounts.google.com/o/oauth2/auth?client_id=${import.meta.env.VITE_CLIENTID}&redirect_uri=${chrome.identity.getRedirectURL()}&response_type=token&scope=https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file`;
+
+    chrome.identity.launchWebAuthFlow(
+      {
+        url: url,
+        interactive: true,
+      },
+      (responseUrl) => {
+        if (chrome.runtime.lastError || !responseUrl) {
+          reject(chrome.runtime.lastError || new Error("Authentication failed"));
+        } else {
+          // Extract the token from the URL fragment
+          const urlParams = new URLSearchParams(new URL(responseUrl).hash.substring(1));
+          const token = urlParams.get("access_token");
+
+          if (token) {
+            resolve(token); // Return the token
+          } else {
+            reject(new Error("No token found in response"));
+          }
+        }
+      }
+    );
+  });
+}
+
 export async function initGapi() {
   try {
-    await loadGapiInsideDOM();
-    console.log("gapi loaded", gapi);
+    const token = await getAuthToken();
+    console.log("Access token:", token);
 
     await loadClient();
-    console.log("google after loadClient():", google);
 
-    const SCOPES =
-      "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
-
-    const tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: import.meta.env.VITE_CLIENTID,
-      scope: SCOPES,
-      callback: "",
+    // Initialize gapi with the token
+    await gapi.client.init({
+      apiKey: import.meta.env.VITE_APIKEY,
+      discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
     });
+    gapi.client.setToken({ access_token: token });
 
-    const accessToken = gapi.client.getToken?.();
+    // const res = await fetch("https://sheets.googleapis.com/v4/spreadsheets", {
+    //   method: "GET",
+    //   headers: {
+    //     Authorization: `Bearer ${token}`,
+    //   },
+    // });
 
-    if (!accessToken) {
-      tokenClient.callback = async (res: any) => {
-        if (res.error) throw new Error(res.error);
-        console.log("Access token response", res);
-      };
-      tokenClient.requestAccessToken({ prompt: "consent" });
+    // const data = await res.json();
+    // console.log("Sheets API response:", data);
+  } catch (err:any) {
+    if (err.message === "Authentication failed") {
+      console.warn("User did not approve access.");
     } else {
-      tokenClient.callback = async (res: any) => {
-        if (res.error) throw new Error(res.error);
-        console.log("Access token refreshed", res);
-      };
-      tokenClient.requestAccessToken({ prompt: "" });
+      console.error("initGapi failed:", err);
     }
-
-    console.log("process finished... everything is loaded");
-  } catch (err) {
-    console.error("initGapi failed:", err);
-    throw err;
   }
 }
+

@@ -15,25 +15,6 @@ function App() {
     signInAndSendToken();
   }
 
-  // // load gapi script
-  // function loadGapi(): Promise<void> {
-  //   return new Promise((resolve) => {
-  //     const script: HTMLScriptElement = document.createElement("script");
-  //     script.setAttribute('src', "/scripts/gapi.js");
-  //     script.setAttribute('type', 'text/javascript');
-  //     script.setAttribute('async', 'true');
-  //     script.onload = () => resolve();
-  //     document.head.appendChild(script);
-
-  //     const clientScript: HTMLScriptElement = document.createElement("script");
-  //     clientScript.setAttribute('src', "/scripts/gapi.js");
-  //     clientScript.setAttribute('type', 'text/javascript');
-  //     clientScript.setAttribute('async', 'true');
-  //     clientScript.onload = () => resolve();
-  //     document.head.appendChild(clientScript);
-  //   });
-  // }
-
   async function signInAndSendToken() {
     try {
       await initGapi();
