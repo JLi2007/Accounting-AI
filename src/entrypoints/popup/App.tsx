@@ -3,25 +3,16 @@ import Chatbot from "@/components/Chatbot";
 import account from "../../assets/account.png";
 import sheets from "../../assets/sheets.png";
 import { IoIosReturnLeft } from "react-icons/io";
-import { initGapi } from "./sheets/gapi";
+import { createSheet } from "./sheets/functions";
 
 function App() {
   const [showInfo, setShowInfo] = useState<boolean>(false);
   const [showChatbot, setShowChatbot] = useState<boolean>(false);
+  const [showAnalyze, setShowAnalyze] = useState<boolean>(false);
 
   async function analyzePage() {
     console.log("analyzing page");
     browser.runtime.sendMessage({ action: "getToken" });
-    signInAndSendToken();
-  }
-
-  async function signInAndSendToken() {
-    try {
-      await initGapi();
-      console.log("success gapi loaded");
-    } catch (e) {
-      console.log("error in signinsend token: ", e);
-    }
   }
 
   return (
@@ -56,6 +47,29 @@ function App() {
           <Chatbot className="h-full" />
         </div>
       )}
+      {showAnalyze && (
+        <div className="absolute z-30 top-0 left-0 w-[97.5%] h-[97.5%] bg-[#242424] text-white px-1 overflow-auto rounded shadow-lg m-1">
+          <button
+            onClick={() => setShowAnalyze(false)}
+            className="underline text-blue-600 hover:text-blue-800 cursor-pointer flex flex-row absolute top-2.5"
+          >
+            <IoIosReturnLeft size={20} /> Back
+          </button>
+          <div className="w-full h-full flex flex-col items-center justify-center">
+            <button
+              className="p-5 w-[60%] border border-white my-2 cursor-pointer"
+              onClick={() =>
+                createSheet()
+              }
+            >
+              create spreadsheet
+            </button>
+            <button className="p-5 w-[60%] border border-white my-2 cursor-pointer">create spreadsheet</button>
+            <button className="p-5 w-[60%] border border-white my-2 cursor-pointer">create spreadsheet</button>
+            <div className="my-3" id="status"></div>
+          </div>
+        </div>
+      )}
 
       <div className="relative bg-[#242424] text-white min-w-[100px] min-h-[100px] w-[500px] h-[600px] text-center">
         <div className="absolute right-[-100px] z-10 w-100 rounded-full blur-sm">
@@ -75,6 +89,7 @@ function App() {
               className="bg-slate-500/80 p-4 my-5 w-50 cursor-pointer hover:bg-slate-500/90 transition delay-200 duration-100 ease-in-out rounded-sm drop-shadow-[0_5px_5px_rgba(15,157,88,0.5)]"
               onClick={() => {
                 analyzePage();
+                setShowAnalyze(true);
               }}
             >
               Analyze Page

@@ -31,8 +31,10 @@ export default defineConfig({
         "https://www.googleapis.com/auth/drive.file",
       ],
     },
-    host_permissions: [    "https://accounts.google.com/*",
-      "https://www.googleapis.com/*"],
+    host_permissions: [    
+      "https://accounts.google.com/*",
+      "https://www.googleapis.com/*"
+    ],
     content_security_policy: {
       extension_pages: `
       script-src 'self' http://localhost:3000;

@@ -1,13 +1,4 @@
-function loadClient(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const clientScript: HTMLScriptElement = document.createElement("script");
-    clientScript.src = chrome.runtime.getURL("/scripts/gapi.js");
-    clientScript.onload = () => resolve();
-    clientScript.onerror = reject;
-    (document.head || document.documentElement).appendChild(clientScript);
-  });
-}
-
+// fetches auth token using chrome identity launchWebAuthFlow
 function getAuthToken(): Promise<string> {
   return new Promise((resolve, reject) => {
     const url = `https://accounts.google.com/o/oauth2/auth?client_id=${import.meta.env.VITE_CLIENTID}&redirect_uri=${chrome.identity.getRedirectURL()}&response_type=token&scope=https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file`;
@@ -21,12 +12,12 @@ function getAuthToken(): Promise<string> {
         if (chrome.runtime.lastError || !responseUrl) {
           reject(chrome.runtime.lastError || new Error("Authentication failed"));
         } else {
-          // Extract the token from the URL fragment
+          // extract the response with URLSearchParams
           const urlParams = new URLSearchParams(new URL(responseUrl).hash.substring(1));
           const token = urlParams.get("access_token");
 
           if (token) {
-            resolve(token); // Return the token
+            resolve(token);
           } else {
             reject(new Error("No token found in response"));
           }
@@ -36,35 +27,37 @@ function getAuthToken(): Promise<string> {
   });
 }
 
-export async function initGapi() {
-  try {
-    const token = await getAuthToken();
-    console.log("Access token:", token);
+// function for api fetch calls
+export async function googleApiRequest<T = any>({
+  path,
+  method = "GET",
+  body,
+  params = {},
+}: {
+  path: string;
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  body?: any;
+  params?: Record<string, string>;
+}): Promise<T> {
+  const token = await getAuthToken();
 
-    await loadClient();
+  const query = new URLSearchParams(params).toString();
+  const url = `${path}${query ? `?${query}` : ""}`;
 
-    // Initialize gapi with the token
-    await gapi.client.init({
-      apiKey: import.meta.env.VITE_APIKEY,
-      discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
-    });
-    gapi.client.setToken({ access_token: token });
+  const res = await fetch(url, {
+    method,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
 
-    // const res = await fetch("https://sheets.googleapis.com/v4/spreadsheets", {
-    //   method: "GET",
-    //   headers: {
-    //     Authorization: `Bearer ${token}`,
-    //   },
-    // });
-
-    // const data = await res.json();
-    // console.log("Sheets API response:", data);
-  } catch (err:any) {
-    if (err.message === "Authentication failed") {
-      console.warn("User did not approve access.");
-    } else {
-      console.error("initGapi failed:", err);
-    }
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Google API error: ${res.status} ${errorText}`);
   }
+
+  return res.json();
 }
 
