@@ -29,6 +29,7 @@ export default defineConfig({
       scopes: [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/admin.directory.user"
       ],
     },
     host_permissions: [    

@@ -3,16 +3,24 @@ import Chatbot from "@/components/Chatbot";
 import account from "../../assets/account.png";
 import sheets from "../../assets/sheets.png";
 import { IoIosReturnLeft } from "react-icons/io";
-import { createSheet } from "./sheets/functions";
+import { getAuthToken } from "./sheets/gapi";
+import { createSheet, getGoogleProfile } from "./sheets/functions";
 
 function App() {
   const [showInfo, setShowInfo] = useState<boolean>(false);
   const [showChatbot, setShowChatbot] = useState<boolean>(false);
   const [showAnalyze, setShowAnalyze] = useState<boolean>(false);
+  const [authToken, setAuthToken] = useState<boolean>(false);
 
   async function analyzePage() {
     console.log("analyzing page");
     browser.runtime.sendMessage({ action: "getToken" });
+    if(!authToken){
+      const token = await getAuthToken();
+      localStorage.setItem("authToken", token);
+      setAuthToken(true);
+      await getGoogleProfile();
+    }
   }
 
   return (
@@ -55,17 +63,18 @@ function App() {
           >
             <IoIosReturnLeft size={20} /> Back
           </button>
+          <img id="pfp" className="absolute top-3 right-3 w-9" />
           <div className="w-full h-full flex flex-col items-center justify-center">
             <button
               className="p-5 w-[60%] border border-white my-2 cursor-pointer"
               onClick={() =>
-                createSheet()
+                createSheet("test sheet")
               }
             >
               create spreadsheet
             </button>
             <button className="p-5 w-[60%] border border-white my-2 cursor-pointer">create spreadsheet</button>
-            <button className="p-5 w-[60%] border border-white my-2 cursor-pointer">create spreadsheet</button>
+            <button className="p-5 w-[60%] border border-white my-2 cursor-pointer">analyze sheet</button>
             <div className="my-3" id="status"></div>
           </div>
         </div>

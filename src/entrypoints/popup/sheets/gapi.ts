@@ -1,7 +1,7 @@
 // fetches auth token using chrome identity launchWebAuthFlow
-function getAuthToken(): Promise<string> {
+export function getAuthToken(): Promise<string> {
   return new Promise((resolve, reject) => {
-    const url = `https://accounts.google.com/o/oauth2/auth?client_id=${import.meta.env.VITE_CLIENTID}&redirect_uri=${chrome.identity.getRedirectURL()}&response_type=token&scope=https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file`;
+    const url = `https://accounts.google.com/o/oauth2/auth?client_id=${import.meta.env.VITE_CLIENTID}&redirect_uri=${chrome.identity.getRedirectURL()}&response_type=token&scope=https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file openid profile email`;
 
     chrome.identity.launchWebAuthFlow(
       {
@@ -39,7 +39,8 @@ export async function googleApiRequest<T = any>({
   body?: any;
   params?: Record<string, string>;
 }): Promise<T> {
-  const token = await getAuthToken();
+
+  const token = localStorage.getItem('authToken');
 
   const query = new URLSearchParams(params).toString();
   const url = `${path}${query ? `?${query}` : ""}`;
