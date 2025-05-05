@@ -23,8 +23,8 @@ export default function Chatbot({ className }: Props) {
 
   return (
     <div className={className}>
-      <div className="flex flex-col h-full bg-white">
-        <h2 className="p-2 mt-1 font-semibold text-sm text-center bg-blue-100 flex text-blue-800 justify-center items-center gap-2">
+      <div className="flex flex-col h-full bg-stone-800/80">
+        <h2 className="p-2 mt-1 font-semibold text-sm text-center bg-stone-600/50 flex text-emerald-600 justify-center items-center gap-2">
           <TbBusinessplan size={20} /> accounting chatbot{" "}
           <TbBusinessplan size={20} />
         </h2>
@@ -34,18 +34,18 @@ export default function Chatbot({ className }: Props) {
               key={index}
               className={`p-3 rounded-lg max-w-xs ${
                 msg.sender === "user"
-                  ? "bg-blue-500 text-white ml-auto"
-                  : "bg-gray-300 text-gray-800"
+                  ? "bg-emerald-600 text-white ml-auto"
+                  : "bg-stone-600/50 text-stone-200"
               }`}
             >
               <Markdown>{msg.text}</Markdown>
             </div>
           ))}
         </div>
-        <div className="flex items-center p-4 bg-gray-50">
+        <div className="flex items-center p-4 bg-stone-600/50">
           <input
             type="text"
-            className="flex-1 p-2 border rounded-lg focus:outline-none"
+            className="flex-1 p-2 border border-emerald-600 rounded-lg focus:outline-none text-white"
             placeholder="message"
             value={input}
             onKeyDown={(e) => {
@@ -59,7 +59,7 @@ export default function Chatbot({ className }: Props) {
             }}
           />
           <button onClick={handleSend} className="p-2 cursor-pointer">
-            <LuSendHorizontal size={20} />
+            <LuSendHorizontal size={20} color="green"/>
           </button>
         </div>
       </div>

@@ -15,7 +15,7 @@ export default defineConfig({
     name: "Accounting AI Extension",
     version: "1.0.0",
     description: "Wrapper of OpenAI",
-    permissions: ["identity"],
+    permissions: ["identity", "tabs", "activeTab"],
     // action: {
     //   default_popup: 'popup.html',
     //   default_icon: './icons/64.png',
@@ -28,7 +28,7 @@ export default defineConfig({
         "312610270965-99jbu0n8av8ogp7bah5l8pi4beeaovrv.apps.googleusercontent.com",
       scopes: [
         "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive.file",
+        "https://www.googleapis.com/auth/drive",
         "https://www.googleapis.com/auth/admin.directory.user"
       ],
     },
@@ -44,7 +44,7 @@ export default defineConfig({
     },
     web_accessible_resources: [
       {
-        resources: ["client.js", "gapi.js"],
+        resources: ["client.js"],
         matches: ["<all_urls>"],
       },
     ],

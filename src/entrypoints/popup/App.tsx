@@ -1,26 +1,65 @@
 import { useState } from "react";
 import Chatbot from "@/components/Chatbot";
+import { DropdownComponent } from "@/components/Dropdown";
+import { getAuthToken } from "./sheets/api";
+import {
+  createSheet,
+  getGoogleProfile,
+  getDriveFolders,
+} from "./sheets/functions";
+import { IoIosReturnLeft, IoMdLink } from "react-icons/io";
 import account from "../../assets/account.png";
 import sheets from "../../assets/sheets.png";
-import { IoIosReturnLeft } from "react-icons/io";
-import { getAuthToken } from "./sheets/gapi";
-import { createSheet, getGoogleProfile } from "./sheets/functions";
 
 function App() {
   const [showInfo, setShowInfo] = useState<boolean>(false);
   const [showChatbot, setShowChatbot] = useState<boolean>(false);
   const [showAnalyze, setShowAnalyze] = useState<boolean>(false);
-  const [authToken, setAuthToken] = useState<boolean>(false);
+  const [showCreateSheet, setShowCreateSheet] = useState<boolean>(false);
 
-  async function analyzePage() {
-    console.log("analyzing page");
-    browser.runtime.sendMessage({ action: "getToken" });
-    if(!authToken){
-      const token = await getAuthToken();
-      localStorage.setItem("authToken", token);
-      setAuthToken(true);
-      await getGoogleProfile();
+  const [isAuthToken, setIsAuthToken] = useState<boolean>(false);
+  const [firstSignin, setfirstSignin] = useState<boolean>(true);
+  const [sheetName, setSheetName] = useState<string>("");
+  const [selectedFolder, setSelectedFolder] = useState<any>();
+  const [selectedFolderID, setSelectedFolderID] = useState<any>();
+  const [folderData, setFolderData] = useState<any>();
+
+  async function initAnalyzePage() {
+    console.log("[BROWSER] analyzing page");
+    browser.runtime.sendMessage({ action: "analyzingPage" });
+
+    // reset token on first signin --> remove in the future?
+    if (firstSignin) {
+      localStorage.removeItem("authToken");
+      setfirstSignin(false);
     }
+    console.log("initial token:", localStorage.getItem("authToken"));
+
+    // check if user has already signed in
+    let token = localStorage.getItem("authToken");
+
+    if (token === null) {
+      try {
+        token = await getAuthToken();
+        localStorage.setItem("authToken", token);
+        setIsAuthToken(true);
+      } catch (err) {
+        console.warn("User cancelled auth:", err);
+        setIsAuthToken(false);
+        return;
+      }
+    }
+    setIsAuthToken(true);
+
+    // fetch from google userinfo
+    const googleFetch = await getGoogleProfile();
+    // set profile picture
+    document.getElementById("pfp")?.setAttribute("src", googleFetch.picture);
+
+    // fetches drive folders
+    const folders = await getDriveFolders(googleFetch.email.toString());
+    console.log("folders fetched, should be an array ", folders);
+    setFolderData(folders);
   }
 
   return (
@@ -44,38 +83,116 @@ function App() {
           </button>
         </div>
       )}
+
       {showChatbot && (
-        <div className="absolute z-30 top-0 left-0 w-[97.5%] h-[97.5%] bg-white text-black px-1 overflow-auto rounded shadow-lg m-1">
+        <div className="absolute z-30 top-0 left-0 w-[97.5%] h-[97.5%] bg-stone-800/50 backdrop-blur-lg text-black px-1 overflow-auto rounded shadow-lg m-1">
           <button
             onClick={() => setShowChatbot(false)}
             className="underline text-blue-600 hover:text-blue-800 cursor-pointer flex flex-row absolute top-2.5"
           >
             <IoIosReturnLeft size={20} /> Back
           </button>
-          <Chatbot className="h-full" />
+          <Chatbot className="h-full w-full" />
         </div>
       )}
+
       {showAnalyze && (
-        <div className="absolute z-30 top-0 left-0 w-[97.5%] h-[97.5%] bg-[#242424] text-white px-1 overflow-auto rounded shadow-lg m-1">
+        <div
+          className={`absolute z-30 top-0 left-0 w-[97.5%] h-[97.5%] bg-[#242424CC] backdrop-blur-lg  text-white px-1 overflow-auto rounded shadow-lg m-1 ${
+            showCreateSheet ? "blur-sm pointer-events-none" : "backdrop-blur-lg"
+          }`}
+        >
           <button
-            onClick={() => setShowAnalyze(false)}
+            onClick={() => {
+              setShowAnalyze(false);
+              setShowCreateSheet(false);
+            }}
             className="underline text-blue-600 hover:text-blue-800 cursor-pointer flex flex-row absolute top-2.5"
           >
             <IoIosReturnLeft size={20} /> Back
           </button>
-          <img id="pfp" className="absolute top-3 right-3 w-9" />
+          {isAuthToken === false && (
+            <button
+              onClick={initAnalyzePage}
+              className="absolute top-2.5 right-1 p-1"
+            >
+              Sign in with Google
+            </button>
+          )}
+          <img id="pfp" className="absolute top-1 right-2 w-9" />
           <div className="w-full h-full flex flex-col items-center justify-center">
             <button
-              className="p-5 w-[60%] border border-white my-2 cursor-pointer"
-              onClick={() =>
-                createSheet("test sheet")
-              }
+              className={`p-5 w-[60%] border border-white my-2 ${
+                !isAuthToken && folderData === null
+                  ? "!cursor-not-allowed pointer-events-none"
+                  : "cursor-pointer"
+              }`}
+              onClick={() => {
+                setShowCreateSheet(true);
+              }}
             >
-              create spreadsheet
+              CREATE spreadsheet
             </button>
-            <button className="p-5 w-[60%] border border-white my-2 cursor-pointer">create spreadsheet</button>
-            <button className="p-5 w-[60%] border border-white my-2 cursor-pointer">analyze sheet</button>
+            <button
+              className={`p-5 w-[60%] border border-white my-2 ${
+                !isAuthToken && folderData === null
+                  ? "!cursor-not-allowed pointer-events-none"
+                  : "cursor-pointer"
+              }`}
+            >
+              CHOOSE spreadsheet
+            </button>
+            <button
+              className={`p-5 w-[60%] border border-white my-2 ${
+                !isAuthToken && folderData === null
+                  ? "!cursor-not-allowed pointer-events-none"
+                  : "cursor-pointer"
+              }`}
+            >
+              ANALYZE sheet
+            </button>
             <div className="my-3" id="status"></div>
+            <div className="flex flex-row items-center justify-center">
+              <IoMdLink className="mr-1" /> no selected sheet
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCreateSheet && (
+        <div className="absolute z-40 backdrop-blur-2xl w-[75%] h-[50%] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg">
+          <div className="flex items-center w-full flex-col justify-center h-full text-emerald-100">
+            <input
+              value={sheetName}
+              onChange={(e) => setSheetName(e.target.value)}
+              className="w-[75%] bg-emerald-400/50 m-1 mt-5 p-2 placeholder:text-emerald-100 rounded-sm focus:outline-none focus:ring-0 focus:border-none"
+              placeholder="sheet name"
+            />
+            <div className="my-3">
+              <DropdownComponent
+                folders={folderData}
+                onSelectFolder={setSelectedFolder}
+                onSelectFolderID={setSelectedFolderID}
+              />
+            </div>
+            <div className="flex flex-row items-center justify-center my-3">
+              <IoMdLink className="mr-1" /> selected folder: {selectedFolder}
+            </div>
+            <button
+              onClick={() => {
+                createSheet(sheetName, selectedFolderID, selectedFolder);
+                setTimeout(() => setShowCreateSheet(false), 1000);
+              }}
+              className="p-2 px-4 bg-emerald-400/60 my-3 rounded-sm hover:bg-emerald-400/80 transition ease-in-out duration-300"
+            >
+              create
+            </button>
+            <button
+              className="absolute justify-center items-center top-1 left-1 p-1 w-10 aspect-square text-white text-xl rounded-full hover:bg-stone-400/15 transition ease-in-out delay-150 duration-500"
+              onClick={() => setShowCreateSheet(false)}
+            >
+              x
+            </button>
           </div>
         </div>
       )}
@@ -97,7 +214,7 @@ function App() {
             <button
               className="bg-slate-500/80 p-4 my-5 w-50 cursor-pointer hover:bg-slate-500/90 transition delay-200 duration-100 ease-in-out rounded-sm drop-shadow-[0_5px_5px_rgba(15,157,88,0.5)]"
               onClick={() => {
-                analyzePage();
+                initAnalyzePage();
                 setShowAnalyze(true);
               }}
             >
