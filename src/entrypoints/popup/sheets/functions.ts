@@ -17,21 +17,20 @@ export async function createSheet(
       },
     });
 
-    // moves the sheet from root to desired folder via parentID
-    await googleApiRequest({
-      path: `https://www.googleapis.com/drive/v3/files/${sheet.spreadsheetId}?addParents=${parentID}&removeParents=root&fields=id,parents`,
-      method: "PATCH",
-    });
-
-    // placeholder stuff
+    // prefire because the next fetch takes a while
     console.log("Created new sheet with ID:", sheet.spreadsheetId);
     document.getElementById("status")!.innerText = `sheet created: ${
       title ? title : "Untitled spreadsheet"
     } in ${parentName}`;
     document.getElementById("status")!.style.color = "green";
 
+    // moves the sheet from root to desired folder via parentID
+    await googleApiRequest({
+      path: `https://www.googleapis.com/drive/v3/files/${sheet.spreadsheetId}?addParents=${parentID}&removeParents=root&fields=id,parents`,
+      method: "PATCH",
+    });
+
     return sheet.spreadsheetId;
-    
   } catch (e: any) {
     // placeholder stuff
     console.log("error", e);
@@ -57,15 +56,30 @@ export async function getGoogleProfile() {
 
 // fetches folders
 export async function getDriveFolders(email: string) {
-  console.log("{DELETE}: ", email);
   const data = await googleApiRequest({
     path: "https://www.googleapis.com/drive/v3/files",
     method: "GET",
     params: {
-      q: `mimeType = 'application/vnd.google-apps.folder' and '${email}' in owners`, // or writers
+      q: `mimeType = 'application/vnd.google-apps.folder' and '${email}' in owners`, // or writers for all folders the user has writing access to.
       fields: "files(id, name, parents)",
+      orderBy: "modifiedTime desc",
     },
   });
   console.log("get all folders:", data);
+  return data.files;
+}
+
+//fetches sheets
+export async function getDriveSheets() {
+  const data = await googleApiRequest({
+    path: "https://www.googleapis.com/drive/v3/files",
+    method: "GET",
+    params: {
+      q: `mimeType = 'application/vnd.google-apps.spreadsheet' and trashed=false`,
+      fields: "files(id, name)",
+      orderBy: "modifiedTime desc",
+    },
+  });
+  console.log("get all spreadsheets:", data);
   return data.files;
 }

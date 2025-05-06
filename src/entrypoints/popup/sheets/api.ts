@@ -42,8 +42,6 @@ export async function googleApiRequest<T = any>({
 
   const token = localStorage.getItem('authToken');
 
-  console.log("TOKEN ", token)
-
   if(!token){
     console.log("[ERROR] no token")
   }

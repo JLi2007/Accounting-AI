@@ -1,5 +1,6 @@
 "use client";
 import { FaRegFolderOpen } from "react-icons/fa6";
+import { SiGooglesheets } from "react-icons/si";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,37 +14,39 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function DropdownComponent({
-  folders,
-  onSelectFolder,
-  onSelectFolderID,
+  type,
+  data,
+  onSelectItem,
+  onSelectItemID,
 }: {
-  folders: any;
-  onSelectFolder: (folder: string) => void;
-  onSelectFolderID: (folder: string) => void;
+  type: "folder" | "sheet";
+  data: any;
+  onSelectItem: (data: string) => void;
+  onSelectItemID: (data: string) => void;
 }) {
-  console.log("{FROM DROPDOWN COMOINENT}:", folders);
+  console.log("{FROM DROPDOWN COMOINENT}:", data);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button className="bg-emerald-400/60 hover:bg-emerald-400/80">
-          <FaRegFolderOpen />
-          Select Folder
+          {type==="folder" ? <FaRegFolderOpen /> : <SiGooglesheets/>}
+          {type==="folder" ? "Select Folder" : "Select Sheet"}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56">
-        <DropdownMenuLabel>Create sheet in:</DropdownMenuLabel>
+        <DropdownMenuLabel>{type==="folder" ? "Create sheet in:" : "Choose sheet:"}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          {folders.map((folder:any, index:number) => (
+          {data.map((item:any, index:number) => (
             <div key={index}>
               <DropdownMenuItem
                 onSelect={() => {
-                  console.log("Selected:", folder.name);
-                  onSelectFolder(folder.name);
-                  onSelectFolderID(folder.id);
+                  console.log("Selected:", item.name);
+                  onSelectItem(item.name);
+                  onSelectItemID(item.id);
                 }}
               >
-                {folder.name}
+                {item.name}
               </DropdownMenuItem>
             </div>
           ))}

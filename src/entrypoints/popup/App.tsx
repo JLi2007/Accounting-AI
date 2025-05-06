@@ -6,23 +6,33 @@ import {
   createSheet,
   getGoogleProfile,
   getDriveFolders,
+  getDriveSheets,
 } from "./sheets/functions";
 import { IoIosReturnLeft, IoMdLink } from "react-icons/io";
+import { SiGooglesheets } from "react-icons/si";
 import account from "../../assets/account.png";
 import sheets from "../../assets/sheets.png";
 
 function App() {
+  // pages state
   const [showInfo, setShowInfo] = useState<boolean>(false);
   const [showChatbot, setShowChatbot] = useState<boolean>(false);
   const [showAnalyze, setShowAnalyze] = useState<boolean>(false);
   const [showCreateSheet, setShowCreateSheet] = useState<boolean>(false);
+  const [showSelectSheet, setShowSelectSheet] = useState<boolean>(false);
 
+  // auth state
   const [isAuthToken, setIsAuthToken] = useState<boolean>(false);
   const [firstSignin, setfirstSignin] = useState<boolean>(true);
+
+  // info state
   const [sheetName, setSheetName] = useState<string>("");
   const [selectedFolder, setSelectedFolder] = useState<any>();
   const [selectedFolderID, setSelectedFolderID] = useState<any>();
+  const [selectedSheet, setSelectedSheet] = useState<any>();
+  const [selectedSheetID, setSelectedSheetID] = useState<any>();
   const [folderData, setFolderData] = useState<any>();
+  const [sheetData, setSheetData] = useState<any>();
 
   async function initAnalyzePage() {
     console.log("[BROWSER] analyzing page");
@@ -60,6 +70,14 @@ function App() {
     const folders = await getDriveFolders(googleFetch.email.toString());
     console.log("folders fetched, should be an array ", folders);
     setFolderData(folders);
+    // fetches drive sheets
+    fetchDriveSheets();
+  }
+
+  async function fetchDriveSheets() {
+    const sheets = await getDriveSheets();
+    console.log("sheets from drive", sheets);
+    setSheetData(sheets);
   }
 
   return (
@@ -123,7 +141,7 @@ function App() {
           <div className="w-full h-full flex flex-col items-center justify-center">
             <button
               className={`p-5 w-[60%] border border-white my-2 ${
-                !isAuthToken && folderData === null
+                !isAuthToken || folderData === null
                   ? "!cursor-not-allowed pointer-events-none"
                   : "cursor-pointer"
               }`}
@@ -135,16 +153,19 @@ function App() {
             </button>
             <button
               className={`p-5 w-[60%] border border-white my-2 ${
-                !isAuthToken && folderData === null
+                !isAuthToken || folderData === null
                   ? "!cursor-not-allowed pointer-events-none"
                   : "cursor-pointer"
               }`}
+              onClick={() => {
+                setShowSelectSheet(true);
+              }}
             >
-              CHOOSE spreadsheet
+              SELECT spreadsheet
             </button>
             <button
               className={`p-5 w-[60%] border border-white my-2 ${
-                !isAuthToken && folderData === null
+                !isAuthToken || folderData === null
                   ? "!cursor-not-allowed pointer-events-none"
                   : "cursor-pointer"
               }`}
@@ -153,7 +174,7 @@ function App() {
             </button>
             <div className="my-3" id="status"></div>
             <div className="flex flex-row items-center justify-center">
-              <IoMdLink className="mr-1" /> no selected sheet
+              <IoMdLink className="mr-1" /> {selectedSheet===null ? "no selected sheet" : "selected sheet: " + `${selectedSheet}`}
             </div>
           </div>
         </div>
@@ -170,18 +191,20 @@ function App() {
             />
             <div className="my-3">
               <DropdownComponent
-                folders={folderData}
-                onSelectFolder={setSelectedFolder}
-                onSelectFolderID={setSelectedFolderID}
+                type="folder"
+                data={folderData}
+                onSelectItem={setSelectedFolder}
+                onSelectItemID={setSelectedFolderID}
               />
             </div>
             <div className="flex flex-row items-center justify-center my-3">
-              <IoMdLink className="mr-1" /> selected folder: {selectedFolder}
+              <SiGooglesheets className="mr-1" /> selected folder: {selectedFolder}
             </div>
             <button
               onClick={() => {
                 createSheet(sheetName, selectedFolderID, selectedFolder);
                 setTimeout(() => setShowCreateSheet(false), 1000);
+                fetchDriveSheets(); // re-fetch the sheets including the new sheet
               }}
               className="p-2 px-4 bg-emerald-400/60 my-3 rounded-sm hover:bg-emerald-400/80 transition ease-in-out duration-300"
             >
@@ -190,6 +213,38 @@ function App() {
             <button
               className="absolute justify-center items-center top-1 left-1 p-1 w-10 aspect-square text-white text-xl rounded-full hover:bg-stone-400/15 transition ease-in-out delay-150 duration-500"
               onClick={() => setShowCreateSheet(false)}
+            >
+              x
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showSelectSheet && (
+        <div className="absolute z-40 backdrop-blur-2xl w-[75%] h-[50%] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg">
+          <div className="flex items-center w-full flex-col justify-center h-full text-emerald-100">
+            <div className="my-3">
+              <DropdownComponent
+                type="sheet"
+                data={sheetData}
+                onSelectItem={setSelectedSheet}
+                onSelectItemID={setSelectedSheetID}
+              />
+            </div>
+            <div className="flex flex-row items-center justify-center my-3">
+              <IoMdLink className="mr-1" /> selected sheet: {selectedSheet}
+            </div>
+            <button
+              onClick={() => {
+                setTimeout(() => setShowSelectSheet(false), 500);
+              }}
+              className="p-2 px-4 bg-emerald-400/60 my-3 rounded-sm hover:bg-emerald-400/80 transition ease-in-out duration-300"
+            >
+              select
+            </button>
+            <button
+              className="absolute justify-center items-center top-1 left-1 p-1 w-10 aspect-square text-white text-xl rounded-full hover:bg-stone-400/15 transition ease-in-out delay-150 duration-500"
+              onClick={() => setShowSelectSheet(false)}
             >
               x
             </button>
