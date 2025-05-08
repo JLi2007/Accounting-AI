@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { LuSendHorizontal } from "react-icons/lu";
 import { TbBusinessplan } from "react-icons/tb";
-import useChatbot from "../hooks/OpenAI";
+import useChatbot from "../hooks/useChatbot";
 import Markdown from "react-markdown"; //use to format messages properly such as /n
 import useChatScroll from "../hooks/chatScroll";
 

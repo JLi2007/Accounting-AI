@@ -24,7 +24,7 @@ export function DropdownComponent({
   onSelectItem: (data: string) => void;
   onSelectItemID: (data: string) => void;
 }) {
-  console.log("{FROM DROPDOWN COMOINENT}:", data);
+  // console.log("{FROM DROPDOWN COMPONENT}:", data);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -41,7 +41,7 @@ export function DropdownComponent({
             <div key={index}>
               <DropdownMenuItem
                 onSelect={() => {
-                  console.log("Selected:", item.name);
+                  // console.log("Selected:", item.name);
                   onSelectItem(item.name);
                   onSelectItemID(item.id);
                 }}

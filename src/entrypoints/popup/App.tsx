@@ -1,13 +1,14 @@
 import { useState } from "react";
 import Chatbot from "@/components/Chatbot";
 import { DropdownComponent } from "@/components/Dropdown";
-import { getAuthToken } from "./sheets/api";
+import { getAuthToken } from "./google/api";
 import {
   createSheet,
   getGoogleProfile,
   getDriveFolders,
   getDriveSheets,
-} from "./sheets/functions";
+} from "./google/drive_functions";
+import { readAllSheetsData, openAIProcessingAllSheets } from "./google/sheets_functions";
 import { IoIosReturnLeft, IoMdLink } from "react-icons/io";
 import { SiGooglesheets } from "react-icons/si";
 import account from "../../assets/account.png";
@@ -20,6 +21,7 @@ function App() {
   const [showAnalyze, setShowAnalyze] = useState<boolean>(false);
   const [showCreateSheet, setShowCreateSheet] = useState<boolean>(false);
   const [showSelectSheet, setShowSelectSheet] = useState<boolean>(false);
+  const [showAnalyzeSheet, setShowAnalyzeSheet] = useState<boolean>(false);
 
   // auth state
   const [isAuthToken, setIsAuthToken] = useState<boolean>(false);
@@ -169,12 +171,20 @@ function App() {
                   ? "!cursor-not-allowed pointer-events-none"
                   : "cursor-pointer"
               }`}
+              onClick={async() => {
+                setShowAnalyzeSheet(true);
+                await openAIProcessingAllSheets(selectedSheetID);
+                setShowAnalyzeSheet(false);
+              }}
             >
               ANALYZE sheet
             </button>
             <div className="my-3" id="status"></div>
             <div className="flex flex-row items-center justify-center">
-              <IoMdLink className="mr-1" /> {selectedSheet===null ? "no selected sheet" : "selected sheet: " + `${selectedSheet}`}
+              <IoMdLink className="mr-1" />{" "}
+              {selectedSheet
+                ? "selected sheet: " + `${selectedSheet}`
+                : "no selected sheet"}
             </div>
           </div>
         </div>
@@ -198,7 +208,8 @@ function App() {
               />
             </div>
             <div className="flex flex-row items-center justify-center my-3">
-              <SiGooglesheets className="mr-1" /> selected folder: {selectedFolder}
+              <SiGooglesheets className="mr-1" /> selected folder:{" "}
+              {selectedFolder}
             </div>
             <button
               onClick={() => {
@@ -248,6 +259,17 @@ function App() {
             >
               x
             </button>
+          </div>
+        </div>
+      )}
+
+      {showAnalyzeSheet && (
+        <div className="absolute z-40 backdrop-blur-2xl w-[75%] h-[50%] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg">
+          <div className="flex items-center w-full flex-col justify-center h-full text-emerald-100">
+            {/* loading bar */}
+            <div className="flex justify-center items-center">
+              <div className="h-10 w-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+            </div>
           </div>
         </div>
       )}

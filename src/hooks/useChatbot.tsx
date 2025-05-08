@@ -32,7 +32,14 @@ const useChatbot = () => {
         "https://api.openai.com/v1/chat/completions",
         {
           model: "gpt-4o",
-          messages: [{ role: "user", content: message }],
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are an accounting professor that only responds to accounting questions, and you use a chill, informal tone. Respond as a professor would.",
+            },
+            { role: "user", content: message },
+          ],
         },
         {
           headers: {
