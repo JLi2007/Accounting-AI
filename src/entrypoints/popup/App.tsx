@@ -8,7 +8,7 @@ import {
   getDriveFolders,
   getDriveSheets,
 } from "./google/drive_functions";
-import { readAllSheetsData, openAIProcessingAllSheets } from "./google/sheets_functions";
+import { openAIProcessing } from "./google/sheets_functions";
 import { IoIosReturnLeft, IoMdLink } from "react-icons/io";
 import { SiGooglesheets } from "react-icons/si";
 import account from "../../assets/account.png";
@@ -54,13 +54,13 @@ function App() {
       try {
         token = await getAuthToken();
         localStorage.setItem("authToken", token);
-        setIsAuthToken(true);
       } catch (err) {
         console.warn("User cancelled auth:", err);
         setIsAuthToken(false);
         return;
       }
     }
+    // update token state
     setIsAuthToken(true);
 
     // fetch from google userinfo
@@ -119,7 +119,9 @@ function App() {
       {showAnalyze && (
         <div
           className={`absolute z-30 top-0 left-0 w-[97.5%] h-[97.5%] bg-[#242424CC] backdrop-blur-lg  text-white px-1 overflow-auto rounded shadow-lg m-1 ${
-            showCreateSheet ? "blur-sm pointer-events-none" : "backdrop-blur-lg"
+            showCreateSheet || showAnalyzeSheet || showSelectSheet
+              ? "blur-sm pointer-events-none"
+              : "backdrop-blur-lg"
           }`}
         >
           <button
@@ -143,8 +145,8 @@ function App() {
           <div className="w-full h-full flex flex-col items-center justify-center">
             <button
               className={`p-5 w-[60%] border border-white my-2 ${
-                !isAuthToken || folderData === null
-                  ? "!cursor-not-allowed pointer-events-none"
+                !isAuthToken || folderData == null
+                  ? "cursor-not-allowed pointer-events-none"
                   : "cursor-pointer"
               }`}
               onClick={() => {
@@ -155,8 +157,8 @@ function App() {
             </button>
             <button
               className={`p-5 w-[60%] border border-white my-2 ${
-                !isAuthToken || folderData === null
-                  ? "!cursor-not-allowed pointer-events-none"
+                !isAuthToken || folderData == null
+                  ? "cursor-not-allowed pointer-events-none"
                   : "cursor-pointer"
               }`}
               onClick={() => {
@@ -166,14 +168,10 @@ function App() {
               SELECT spreadsheet
             </button>
             <button
-              className={`p-5 w-[60%] border border-white my-2 ${
-                !isAuthToken || folderData === null
-                  ? "!cursor-not-allowed pointer-events-none"
-                  : "cursor-pointer"
-              }`}
-              onClick={async() => {
+              className={`p-5 w-[60%] border border-white my-2 cursor-not-allowed pointer-events-none opacity-75`}
+              onClick={async () => {
                 setShowAnalyzeSheet(true);
-                await openAIProcessingAllSheets(selectedSheetID);
+                await openAIProcessing(selectedSheetID);
                 setShowAnalyzeSheet(false);
               }}
             >
@@ -291,8 +289,8 @@ function App() {
             <button
               className="bg-slate-500/80 p-4 my-5 w-50 cursor-pointer hover:bg-slate-500/90 transition delay-200 duration-100 ease-in-out rounded-sm drop-shadow-[0_5px_5px_rgba(15,157,88,0.5)]"
               onClick={() => {
-                initAnalyzePage();
                 setShowAnalyze(true);
+                initAnalyzePage();
               }}
             >
               Analyze Page

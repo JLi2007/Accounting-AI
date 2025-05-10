@@ -1,7 +1,20 @@
+// BROKEN
+// this feature is impossible to implement
+// context is impossible, the ai can't follow questions along in a spreadsheet cell format.
+
+
 import { googleApiRequest } from "./api";
 import { openAIRequest } from "./api";
 
-export async function readAllSheetsData(spreadsheetId: string) {
+// MAX TOKENS allowed per request safely (gpt-4o default limit ~30k TPM)
+const MAX_TOKENS = 12000;
+
+// Utility to estimate token count from text (very rough)
+function estimateTokens(text: string) {
+  return Math.ceil(text.length / 4); // 4 chars/token is a good average
+}
+
+export async function readAllSheets(spreadsheetId: string) {
   const data = await googleApiRequest({
     path: `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`,
     method: "GET",
@@ -10,62 +23,118 @@ export async function readAllSheetsData(spreadsheetId: string) {
     },
   });
 
-  return data.sheets.map((sheet: any) => {
+  const result: Record<string, string[][]> = {};
+
+  for (const sheet of data.sheets) {
     const title = sheet.properties.title;
     const rows = sheet.data?.[0]?.rowData || [];
-    const values = rows.map((row: any) =>
+
+    result[title] = rows.map((row: any) =>
       (row.values || []).map((cell: any) => cell.formattedValue || "")
     );
-    console.log("[SGEETS]:", title, values);
-    return { title, values };
+  }
+
+  return result;
+}
+
+// Split large sheets into smaller logical blocks based on row count
+function chunkData(data: string[][]) {
+  const chunks: string[][][] = [];
+  let currentChunk: string[][] = [];
+  let currentTokens = 0;
+
+  for (const row of data) {
+    const preview = [...currentChunk, row];
+    const jsonText = JSON.stringify({ data: preview });
+
+    if (estimateTokens(jsonText) > MAX_TOKENS) {
+      if (currentChunk.length > 0) {
+        chunks.push(currentChunk);
+      }
+      currentChunk = [row]; // start new chunk with current row
+      currentTokens = estimateTokens(jsonText);
+    } else {
+      currentChunk.push(row);
+    }
+  }
+
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk); // push last chunk
+  }
+
+  return chunks;
+}
+
+// ↓ Trims data into blocks and sends to OpenAI in parallel
+export async function callOpenAI(sheetName: string, sheetData: string[][]) {
+  const chunks = chunkData(sheetData); // split data into blocks
+
+  // Process chunks concurrently (Promise.all)
+  const chunkPromises = chunks.map(async (chunk) => {
+    const prompt = `
+You are an accounting professor. Analyze this sheet tab called "${sheetName}".
+Only return a JSON array of updates like: { "cell": "A1", "value": "..." }
+
+
+\`\`\`json
+${JSON.stringify({ data: chunk }, null, 2)}
+\`\`\`
+    `.trim();
+
+    const res = await openAIRequest({ body: prompt });
+
+    console.log("{RESPONSE}:", res.choices[0]);
+
+    const content = res.choices[0].message.content;
+    const clean = content.replace(/```json|```/g, "").trim();
+    
+    const updates: Array<{ cell: string; value: string }> = JSON.parse(clean);
+
+    return updates;
+  });
+
+  // Wait for all chunks to complete and merge results
+  const allUpdates = (await Promise.all(chunkPromises)).flat();
+
+  return allUpdates;
+}
+
+// apply updates
+export async function applyUpdates(
+  spreadsheetId: string,
+  updates: Array<{ cell: string; value: string }>
+) {
+  const data = updates.map((u) => ({
+    range: u.cell,
+    values: [[u.value]],
+  }));  
+
+  console.log("APPLYING UPDATES")
+
+  await googleApiRequest({
+    path: `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchUpdate`,
+    method: "POST",
+    body: {
+      valueInputOption: "RAW",
+      data,
+    },
   });
 }
 
-export async function openAIProcessingAllSheets(spreadsheetId: string) {
-  const sheets = await readAllSheetsData(spreadsheetId);
+// ↓ Process all sheets, chunking and sending concurrently
+export async function openAIProcessing(spreadsheetId: string) {
+  const allSheets = await readAllSheets(spreadsheetId);
 
-  // process each sheet concurrently
-  await Promise.all(
-    sheets.map(async ({ title, values }: { title: string; values: string[][] }) => {
-      const prompt =
-        `This is the data for sheet "${title}":\n` +
-        "```json\n" +
-        JSON.stringify({ data: values }, null, 2) +
-        "\n```\n" +
-        `Fill in the missing/incomplete cells. Use context from other cells if possible and if needed, and return an array of { cell: 'A1', value: '...' }`;
+  console.log("DONE READING ALL SHEETS");
 
-      const res = await openAIRequest({ body: prompt });
-
-      const updates: Array<{ cell: string; value: string }> = JSON.parse(
-        res.choices[0].message.content
-      );
-
-      const data = updates.map((u) => ({
-        range: `${title}!${u.cell}`, 
-        values: [[u.value]],
-      }));
-
-      console.log("[GOT TO HERE]:", data);
-
-      // clear first
-      await googleApiRequest({
-        path: `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(title)}!A1:Z1000:clear`,
-        method: "POST",
-      });
-
-      console.log("CLEARED: NOW INSERTINGGGGGGGGG")
-
-      // insert new data
-      await googleApiRequest({
-        path: `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values:batchUpdate`,
-        method: "POST",
-        body: {
-          valueInputOption: "RAW",
-          data,
-        },
-      });
-
-      console.log("FINISHED ANALYSIS LMAO")
-    })
+  // Process each sheet concurrently (if needed, we can still do this for multiple sheets)
+  const sheetPromises = Object.entries(allSheets).map(([sheetName, data]) =>
+    callOpenAI(sheetName, data).then((updates) =>
+      applyUpdates(spreadsheetId, updates)
+    )
   );
+
+  console.log("DONEDONEDONEDONE");
+
+  await Promise.all(sheetPromises); // concurrent processing
 }

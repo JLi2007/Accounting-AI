@@ -11,11 +11,11 @@ export default defineBackground(() => {
         const allowed = /https:\/\/(docs\.google\.com\/spreadsheets|drive\.google\.com)/.test(url);
         if (!allowed) {
           console.log('not on correct scope (drive, sheets)');
-          // localStorage.setItem("scope", "correct");
+          // perhaps do something, maybe not
         }
         else{
           console.log('on correct scope');
-          // localStorage.setItem("scope", "incorrect");
+          // horray
         }
       });
     }
